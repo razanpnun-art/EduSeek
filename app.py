@@ -13,7 +13,8 @@ TOP_K = 10
 
 @st.cache_resource(show_spinner="Loading search index...")
 def load_system():
-    pt.java.init()
+    if not pt.java.started():
+        pt.java.init()
     index = pt.IndexFactory.of(pt.IndexRef.of(str(INDEX_FILE)))
     retrievers = {
         "TF-IDF": pt.BatchRetrieve(
