@@ -1,5 +1,59 @@
 import streamlit as st
+import re
+import html
+from pathlib import Path
+import pandas as pd
+import pyterrier as pt
 
+BASE_DIR = Path(__file__).parent
+INDEX_FILE = BASE_DIR / "coursera_index" / "data.properties"
+COLLECTION_FILE = BASE_DIR / "collection.csv"
+TOP_K = 10
+
+
+@st.cache_resource(show_spinner="Loading search index...")
+def load_system():
+    pt.java.init()
+    index = pt.IndexFactory.of(pt.IndexRef.of(str(INDEX_FILE)))
+    retrievers = {
+        "TF-IDF": pt.BatchRetrieve(
+            index, controls={"wmodel": "TF_IDF"}, num_results=TOP_K
+        ),
+        "BM25": pt.BatchRetrieve(
+            index, controls={"wmodel": "BM25"}, num_results=TOP_K
+        ),
+    }
+    collection = pd.read_csv(COLLECTION_FILE, encoding="utf-8-sig")
+    collection["docno"] = collection["docno"].astype(str)
+    collection = collection.set_index("docno")
+    return retrievers, collection
+
+
+def search_courses(query, method):
+    # Remove special characters that can break the Terrier query parser
+    clean_query = re.sub(r"[^A-Za-z0-9 ]+", " ", query).strip()
+    if not clean_query:
+        return []
+
+    retrievers, collection = load_system()
+    queries = pd.DataFrame([{"qid": "1", "query": clean_query}])
+    res = retrievers[method].transform(queries)
+
+    results = []
+    for _, row in res.iterrows():
+        docno = str(row["docno"])
+        title, text = "Unknown course", ""
+        if docno in collection.index:
+            title = str(collection.loc[docno, "title"])
+            text = str(collection.loc[docno, "text"])
+        results.append({
+            "rank": int(row["rank"]) + 1,
+            "title": title,
+            "docno": docno,
+            "score": float(row["score"]),
+            "description": text[:250],
+        })
+    return results
 st.set_page_config(
     page_title="EduSeek | Course Search",
     page_icon="🎓",
@@ -109,39 +163,20 @@ if search:
         st.write(f"**Query:** {query}")
         st.write(f"**Retrieval Method:** {method}")
 
-        # Temporary frontend data
-        # Replace with real retrieval results later
-        sample_results = [
-            {
-                "rank": 1,
-                "title": "Data Analysis in Python",
-                "docno": "6559",
-                "score": 0.92
-            },
-            {
-                "rank": 2,
-                "title": "Python Data Analytics",
-                "docno": "3304",
-                "score": 0.85
-            },
-            {
-                "rank": 3,
-                "title": "Foundations of Data Analysis",
-                "docno": "782",
-                "score": 0.78
-            }
-        ]
+        results = []
+        try:
+            results = search_courses(query, method)
+        except Exception as e:
+            st.error(f"Search failed: {e}")
+        else:
+            if not results:
+                st.warning("No results found. Try different English keywords.")
 
-        st.info(
-            "Demo results only. "
-            "Real retrieval integration is pending."
-        )
-
-        for course in sample_results:
+        for course in results:
             st.markdown(f"""
             <div class="result-card">
                 <div class="result-title">
-                    {course['rank']}. {course['title']}
+                    {course['rank']}. {html.escape(course['title'])}
                 </div>
                 <div class="result-details">
                     Document ID: {course['docno']}
@@ -151,6 +186,9 @@ if search:
                     <span class="score">
                         {course['score']:.2f}
                     </span>
+                </div>
+                <div class="result-details">
+                    {html.escape(course['description'])}...
                 </div>
             </div>
             """, unsafe_allow_html=True)
