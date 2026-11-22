@@ -44,7 +44,7 @@ def preprocess_text(text):
     return text
 BASE_DIR = Path(__file__).parent
 INDEX_FILE = BASE_DIR / "coursera_index" / "data.properties"
-COLLECTION_FILE = BASE_DIR / "collection.csv"
+COLLECTION_FILE = BASE_DIR / "collection (11).csv"
 TOP_K = 10
 
 
