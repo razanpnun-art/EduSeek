@@ -4,7 +4,44 @@ import html
 from pathlib import Path
 import pandas as pd
 import pyterrier as pt
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
 
+@st.cache_resource
+def load_preprocessing():
+    nltk.download("stopwords", quiet=True)
+    stop_words = set(stopwords.words("english"))
+    stemmer = PorterStemmer()
+    return stop_words, stemmer
+
+stop_words, stemmer = load_preprocessing()
+
+def normalize_text(text):
+    text = str(text).lower()
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+def remove_stopwords(text):
+    words = text.split()
+    filtered_words = [
+        word for word in words if word not in stop_words
+    ]
+    return " ".join(filtered_words)
+
+def stem_text(text):
+    words = text.split()
+    stemmed_words = [
+        stemmer.stem(word) for word in words
+    ]
+    return " ".join(stemmed_words)
+
+def preprocess_text(text):
+    text = normalize_text(text)
+    text = remove_stopwords(text)
+    text = stem_text(text)
+    return text
 BASE_DIR = Path(__file__).parent
 INDEX_FILE = BASE_DIR / "coursera_index" / "data.properties"
 COLLECTION_FILE = BASE_DIR / "collection.csv"
@@ -31,8 +68,7 @@ def load_system():
 
 
 def search_courses(query, method):
-    # Remove special characters that can break the Terrier query parser
-    clean_query = re.sub(r"[^A-Za-z0-9 ]+", " ", query).strip()
+    clean_query = preprocess_text(query)
     if not clean_query:
         return []
 
