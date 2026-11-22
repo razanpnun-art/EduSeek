@@ -43,7 +43,7 @@ def preprocess_text(text):
     text = stem_text(text)
     return text
 BASE_DIR = Path(__file__).parent
-INDEX_FILE = BASE_DIR / "coursera_index" / "data.properties"
+INDEX_FILE = BASE_DIR / "data.properties"
 COLLECTION_FILE = BASE_DIR / "collection (11).csv"
 TOP_K = 10
 
