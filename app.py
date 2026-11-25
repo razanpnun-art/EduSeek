@@ -96,97 +96,81 @@ def search_courses(query, method):
     return results
 
 
-# Website interface
-
-st.title("🎓 EduSeek")
-
-st.subheader("Knowledge is one search away.")
-
-st.caption(
-    "Discover courses that match your interests and learning goals."
-)
+st.title(":material/menu_book: EduSeek")
 
 st.write("")
 
-with st.container(border=True):
+st.header("The world is yours to learn.")
 
-    with st.form("search_form"):
+st.caption("Find the knowledge you're looking for.")
 
-        query = st.text_input(
-            "What would you like to learn?",
-            placeholder="e.g. Data Analysis with Python"
-        )
+st.write("")
 
-        method = st.radio(
-            "Select retrieval method",
+with st.form("search_form"):
+
+    query = st.text_input(
+        "Search for a course",
+        placeholder="Search for a course...",
+        label_visibility="collapsed"
+    )
+
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        method = st.selectbox(
+            "Retrieval Method",
             ["TF-IDF", "BM25"],
-            horizontal=True
+            label_visibility="collapsed"
         )
 
+    with col2:
         search = st.form_submit_button(
-            "Search courses",
+            "Search",
             type="primary",
             use_container_width=True
         )
 
 if search:
-
     if not query.strip():
         st.warning("Please enter a search query.")
 
     else:
-
-        results = []
-
         try:
-            with st.spinner("Finding relevant courses..."):
+            with st.spinner("Searching courses..."):
                 results = search_courses(query, method)
+
+            st.divider()
+            st.subheader("Search Results")
+
+            st.caption(
+                f"{len(results)} results | {method}"
+            )
+
+            if not results:
+                st.warning("No results found.")
+
+            for course in results:
+                with st.container(border=True):
+
+                    st.subheader(
+                        f"{course['rank']}. {course['title']}"
+                    )
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.caption(
+                            f"Document ID: {course['docno']}"
+                        )
+
+                    with col2:
+                        st.markdown(
+                            f"Relevance Score: :blue[**{course['score']:.2f}**]"
+                        )
+
+                    st.caption(
+                        course["description"] + "..."
+                    )
 
         except Exception as e:
             st.error(f"Search failed: {e}")
-
-        else:
-
-            if not results:
-                st.warning(
-                    "No results found. Try different English keywords."
-                )
-
-            else:
-
-                st.divider()
-                st.subheader("Search results")
-
-                st.caption(
-                    f'{len(results)} results for "{query}" · {method}'
-                )
-
-                for course in results:
-
-                    with st.container(border=True):
-
-                        left, right = st.columns([3, 1])
-
-                        with left:
-                            st.caption(
-                                f"RANK {course['rank']:02d}"
-                            )
-
-                            st.subheader(course["title"])
-
-                            st.caption(
-                                f"Document ID: {course['docno']}"
-                            )
-
-                        with right:
-                            st.metric(
-                                "Relevance Score",
-                                f"{course['score']:.6f}"
-                            )
-
-                        if course["description"]:
-                            with st.expander("Course details"):
-                                st.text(course["description"] + "...")
-
-st.divider()
-st.caption("EduSeek · Search. Discover. Learn.")
