@@ -1,13 +1,16 @@
 import streamlit as st
 import re
-import html
 from pathlib import Path
 import pandas as pd
 import pyterrier as pt
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
-
+st.set_page_config(
+    page_title="EduSeek | Course Search",
+    page_icon="🎓",
+    layout="centered"
+)
 @st.cache_resource
 def load_preprocessing():
     nltk.download("stopwords", quiet=True)
@@ -91,146 +94,99 @@ def search_courses(query, method):
             "description": text[:250],
         })
     return results
-st.set_page_config(
-    page_title="EduSeek | Course Search",
-    page_icon="🎓",
-    layout="wide"
+
+
+# Website interface
+
+st.title("🎓 EduSeek")
+
+st.subheader("Knowledge is one search away.")
+
+st.caption(
+    "Discover courses that match your interests and learning goals."
 )
 
-st.markdown("""
-<style>
-.stApp {
-    background-color: #F4F8FC;
-}
+st.write("")
 
-.block-container {
-    max-width: 1050px;
-    padding-top: 2rem;
-}
+with st.container(border=True):
 
-.hero {
-    background: linear-gradient(120deg, #102C46, #176A79);
-    padding: 35px;
-    border-radius: 18px;
-    color: white;
-    margin-bottom: 28px;
-}
+    with st.form("search_form"):
 
-.hero h1 {
-    color: white;
-    font-size: 42px;
-    margin-bottom: 10px;
-}
+        query = st.text_input(
+            "What would you like to learn?",
+            placeholder="e.g. Data Analysis with Python"
+        )
 
-.hero p {
-    color: #D3E5F2;
-    font-size: 17px;
-}
+        method = st.radio(
+            "Select retrieval method",
+            ["TF-IDF", "BM25"],
+            horizontal=True
+        )
 
-.result-card {
-    background: white;
-    padding: 22px;
-    border-radius: 14px;
-    border: 1px solid #DFE8EF;
-    margin-bottom: 14px;
-}
-
-.result-title {
-    color: #102C46;
-    font-size: 20px;
-    font-weight: 650;
-}
-
-.result-details {
-    color: #64748B;
-    font-size: 14px;
-    margin-top: 8px;
-}
-
-.score {
-    color: #137C85;
-    font-weight: bold;
-}
-
-.stButton > button {
-    background-color: #137C85;
-    color: white;
-    border-radius: 9px;
-    border: none;
-    padding: 10px 28px;
-}
-
-.stButton > button:hover {
-    background-color: #0D6068;
-    color: white;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-<div class="hero">
-    <h1>🎓 EduSeek</h1>
-    <p>Discover your next course</p>
-    <p>Find relevant online courses using TF-IDF and BM25.</p>
-</div>
-""", unsafe_allow_html=True)
-
-st.subheader("🔎 Search Courses")
-
-query = st.text_input(
-    "What would you like to learn?",
-    placeholder="e.g. Data Analysis with Python"
-)
-
-method = st.radio(
-    "Select Retrieval Method",
-    ["TF-IDF", "BM25"],
-    horizontal=True
-)
-
-search = st.button("🔍 Search Courses")
+        search = st.form_submit_button(
+            "Search courses",
+            type="primary",
+            use_container_width=True
+        )
 
 if search:
+
     if not query.strip():
         st.warning("Please enter a search query.")
-    else:
-        st.divider()
-        st.subheader("Search Results")
 
-        st.write(f"**Query:** {query}")
-        st.write(f"**Retrieval Method:** {method}")
+    else:
 
         results = []
+
         try:
-            results = search_courses(query, method)
+            with st.spinner("Finding relevant courses..."):
+                results = search_courses(query, method)
+
         except Exception as e:
             st.error(f"Search failed: {e}")
-        else:
-            if not results:
-                st.warning("No results found. Try different English keywords.")
 
-        for course in results:
-            st.markdown(f"""
-            <div class="result-card">
-                <div class="result-title">
-                    {course['rank']}. {html.escape(course['title'])}
-                </div>
-                <div class="result-details">
-                    Document ID: {course['docno']}
-                </div>
-                <div class="result-details">
-                    Relevance Score:
-                    <span class="score">
-                        {course['score']:.2f}
-                    </span>
-                </div>
-                <div class="result-details">
-                    {html.escape(course['description'])}...
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+        else:
+
+            if not results:
+                st.warning(
+                    "No results found. Try different English keywords."
+                )
+
+            else:
+
+                st.divider()
+                st.subheader("Search results")
+
+                st.caption(
+                    f'{len(results)} results for "{query}" · {method}'
+                )
+
+                for course in results:
+
+                    with st.container(border=True):
+
+                        left, right = st.columns([3, 1])
+
+                        with left:
+                            st.caption(
+                                f"RANK {course['rank']:02d}"
+                            )
+
+                            st.subheader(course["title"])
+
+                            st.caption(
+                                f"Document ID: {course['docno']}"
+                            )
+
+                        with right:
+                            st.metric(
+                                "Relevance Score",
+                                f"{course['score']:.6f}"
+                            )
+
+                        if course["description"]:
+                            with st.expander("Course details"):
+                                st.text(course["description"] + "...")
 
 st.divider()
-st.caption(
-    "EduSeek | Information Retrieval Course Project"
-)
+st.caption("EduSeek · Search. Discover. Learn.")
