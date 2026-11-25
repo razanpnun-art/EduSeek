@@ -114,7 +114,7 @@ with st.form("search_form"):
         label_visibility="collapsed"
     )
 
-method = st.radio(
+    method = st.radio(
         "Select Retrieval Method",
         ["TF-IDF", "BM25"],
         horizontal=True
