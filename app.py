@@ -114,21 +114,17 @@ with st.form("search_form"):
         label_visibility="collapsed"
     )
 
-    col1, col2 = st.columns([1, 1])
+method = st.radio(
+        "Select Retrieval Method",
+        ["TF-IDF", "BM25"],
+        horizontal=True
+    )
 
-    with col1:
-        method = st.selectbox(
-            "Retrieval Method",
-            ["TF-IDF", "BM25"],
-            label_visibility="collapsed"
-        )
-
-    with col2:
-        search = st.form_submit_button(
-            "Search",
-            type="primary",
-            use_container_width=True
-        )
+    search = st.form_submit_button(
+        "Search",
+        type="primary",
+        use_container_width=True
+    )
 
 if search:
     if not query.strip():
